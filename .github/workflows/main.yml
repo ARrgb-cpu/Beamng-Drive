@@ -1,0 +1,26 @@
+name: 80-Core EPYC BeamNG Host
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  beast-mode:
+    runs-on: self-hosted # Points to your EPYC server
+    steps:
+      - name: Optimize 80-Core CPU for BeamNG
+        run: |
+          # BeamNG physics loves cores, but Windows sometimes parks them.
+          # This command forces all 80 cores to stay awake.
+          powercfg /setacvalueindex scheme_current sub_processor CPMINCORES 100
+          powercfg /setactive scheme_current
+
+      - name: Setup Tailscale Mesh
+        run: |
+          # Connects your EPYC server to your private Tailnet
+          & 'C:\Program Files\Tailscale\tailscale.exe' up --authkey=${{ secrets.TAILSCALE_KEY }} --accept-routes
+
+      - name: Launch Sunshine Service
+        run: |
+          # Ensure the high-performance streamer is active
+          Start-Service -Name "Sunshine"
+        
