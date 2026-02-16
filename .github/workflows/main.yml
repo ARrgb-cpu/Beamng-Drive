@@ -1,26 +1,41 @@
-name: 80-Core EPYC BeamNG Host
+name: 80-Core BeamNG Server
 
-on: 
+on:
   workflow_dispatch:
 
 jobs:
-  beast-mode:
-    runs-on: self-hosted # Points to your EPYC server
+  run-beast:
+    # Use 'self-hosted' to point to your actual 80-core EPYC machine
+    runs-on: self-hosted 
+    timeout-minutes: 3600
+
     steps:
-      - name: Optimize 80-Core CPU for BeamNG
+      - name: Optimize 80-Core CPU for Physics
         run: |
-          # BeamNG physics loves cores, but Windows sometimes parks them.
-          # This command forces all 80 cores to stay awake.
-          powercfg /setacvalueindex scheme_current sub_processor CPMINCORES 100
-          powercfg /setactive scheme_current
+          # BeamNG loves cores, but Windows often parks them to save power.
+          # Force the 'High Performance' power plan.
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          # Set process priority for gaming services
+          Get-Process -Name "BeamNG.drive" -ErrorAction SilentlyContinue | ForEach-Object { $_.PriorityClass = 'High' }
 
-      - name: Setup Tailscale Mesh
+      - name: Configure Tailscale Direct Connection
         run: |
-          # Connects your EPYC server to your private Tailnet
-          & 'C:\Program Files\Tailscale\tailscale.exe' up --authkey=${{ secrets.TAILSCALE_KEY }} --accept-routes
+          # Connect to your Tailnet
+          # Ensure you use '--accept-routes' if your server is on a different subnet
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_KEY }} --hostname=epyc-beamng-host
 
-      - name: Launch Sunshine Service
+      - name: Setup Virtual Display (For Headless Servers)
         run: |
-          # Ensure the high-performance streamer is active
-          Start-Service -Name "Sunshine"
-        
+          # If your EPYC server doesn't have a monitor plugged in, RDP/Sunshine 
+          # needs a virtual display to 'see' the 8GB VRAM.
+          # Download and install IddSampleDriver (Optional but recommended)
+          Write-Host "Ensure IddSampleDriver is installed for 4K/144Hz streaming support."
+
+      - name: Maintain Server Loop
+        run: |
+          $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+          Write-Host "=== BEAST SERVER ACTIVE ==="
+          Write-Host "Connect via Tailscale IP: $ip"
+          Write-Host "Hardware: 80-Core AMD EPYC | 16GB+ RAM | 8GB VRAM"
+          
+          while($true) { Start-Sleep -Seconds 300 }
